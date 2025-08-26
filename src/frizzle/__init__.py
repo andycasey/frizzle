@@ -18,7 +18,7 @@ def frizzle(
     flags: Optional[jnp.array] = None,
     censor_missing_regions: Optional[bool] = True,
     n_modes: Optional[int] = None,
-):
+) -> tuple[jnp.array, jnp.array, jnp.array, dict]:
     """
     Combine spectra by forward modeling.
 
@@ -49,16 +49,16 @@ def frizzle(
         The number of Fourier modes to use. If `None` is given then this will default to `len(λ_out)`.
             
     :returns:
-        A four-length tuple of ``(flux, ivar, flags, meta)`` where:
-            - ``flux`` is the combined fluxes,
-            - ``ivar`` is the variance of the combined fluxes,
-            - ``flags`` are the combined flags, and 
-            - ``meta`` is a dictionary.
+        A four-length tuple of:
+            - the combined fluxes;
+            - the diagonal of the covariance matrix of combined fluxes;
+            - the combined flags; and
+            - a metadata dictionary.
     """
 
     λ_out, λ, flux, ivar, mask = check_inputs(λ_out, λ, flux, ivar, mask)
 
-    y_star, C_inv_star, meta = _frizzle_materialized(
+    y_star, C_star, meta = _frizzle_materialized(
         λ_out, λ[~mask], flux[~mask], ivar[~mask], 
         n_modes or min([len(λ_out), int(np.sum(~mask))]),
     )
@@ -73,11 +73,11 @@ def frizzle(
         meta["no_data_mask"] = no_data
         if jnp.any(no_data):
             y_star = jnp.where(no_data, jnp.nan, y_star)
-            C_inv_star = jnp.where(no_data, 0, C_inv_star)
+            C_star = jnp.where(no_data, jnp.inf, C_star)
 
     flags_star = combine_flags(λ_out, λ, flags)
 
-    return (y_star, C_inv_star, flags_star, meta)
+    return (y_star, C_star, flags_star, meta)
 
 
 @partial(jax.jit, static_argnames=("n_modes",))
@@ -118,22 +118,20 @@ def _frizzle_materialized(λ_out, λ, flux, ivar, n_modes):
     cho_factor = jax.scipy.linalg.cho_factor(ATCinvA)        
     θ = jax.scipy.linalg.cho_solve(cho_factor, ATCinv @ flux)
     y_star = matvec(θ, x_star, n_modes)
-    t_combined_flux, t = (time() - t, time())
+    t_y_star, t = (time() - t, time())
 
     ATCinvA_inv = jax.scipy.linalg.cho_solve(cho_factor, I)
     A_star_T = matmat(I, x_star, n_modes)
-    C_inv_star = 1/jnp.diag(A_star_T.T @ ATCinvA_inv @ A_star_T)
-    t_combined_ivar = time() - t
+    C_star = jnp.diag(A_star_T.T @ ATCinvA_inv @ A_star_T)
+    t_C_star = time() - t
     meta = dict(
         timing=dict(
             t_setup=t_setup, 
-            t_combined_flux=t_combined_flux, 
-            t_combined_ivar=t_combined_ivar
+            t_y_star=t_y_star, 
+            t_C_star=t_C_star
         ),
     )
-    # TODO: Return the diagonals of C_star
-
-    return (y_star, C_inv_star, meta)
+    return (y_star, C_star, meta)
 
 
 @partial(jax.jit, static_argnames=("p", ))
