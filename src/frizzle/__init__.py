@@ -104,8 +104,9 @@ def _frizzle_materialized(λ_out, λ, flux, ivar, n_modes):
     t = time()
     λ_min, λ_max = (λ_out[0], λ_out[-1])
 
-    small = (λ_max - λ_min)/(1 + len(λ_out))
-    scale = (1 - small) * 2 * jnp.pi / (λ_max - λ_min)
+    edge = 2 * jnp.pi / len(λ_out)
+    scale = 2 * jnp.pi * (1 - edge) / (λ_max - λ_min)
+
     x = (λ - λ_min) * scale 
     x_star = (λ_out - λ_min) * scale
     I = jnp.eye(n_modes)
@@ -130,6 +131,8 @@ def _frizzle_materialized(λ_out, λ, flux, ivar, n_modes):
             t_combined_ivar=t_combined_ivar
         ),
     )
+    # TODO: Return the diagonals of C_star
+
     return (y_star, C_inv_star, meta)
 
 
