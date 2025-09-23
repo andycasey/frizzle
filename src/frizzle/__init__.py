@@ -1,10 +1,10 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jaxopt import linear_solve
 from functools import partial
 from sklearn.neighbors import KDTree
 from typing import Optional
-from time import time
 
 from jax_finufft import nufft1, nufft2
 from .utils import check_inputs, combine_flags
@@ -57,12 +57,11 @@ def frizzle(
     """
 
     λ_out, λ, flux, ivar, mask = check_inputs(λ_out, λ, flux, ivar, mask)
+    n_modes = n_modes or min([len(λ_out), int(np.sum(~mask))])
 
-    y_star, C_star, meta = _frizzle_materialized(
-        λ_out, λ[~mask], flux[~mask], ivar[~mask], 
-        n_modes or min([len(λ_out), int(np.sum(~mask))]),
-    )
-    
+    y_star, C_star = _frizzle_materialized(λ_out, λ[~mask], flux[~mask], ivar[~mask], n_modes)
+
+    meta = dict(n_modes=n_modes)
     if censor_missing_regions:
         # Set NaNs for regions where there were NO data.
         # Here we check to see if the closest input value was more than the output pixel width.
@@ -81,27 +80,23 @@ def frizzle(
 
 
 @partial(jax.jit, static_argnames=("n_modes",))
-def matvec(c, x, n_modes):
-    return jnp.real(nufft2(_pre_matvec(c, n_modes), x))
+def matvec(c, x, n_modes, weights):
+    return jnp.real(nufft2(_pre_matvec(c, n_modes), x)) * weights
 
 @partial(jax.jit, static_argnames=("n_modes",))
-def rmatvec(f, x, n_modes):
+def rmatvec(f, x, n_modes, weights):
     dtype = jnp.array(0.0 + 0.0j).dtype
-    return _post_rmatvec(nufft1(n_modes, f.astype(dtype), x), n_modes)
+    return _post_rmatvec(nufft1(n_modes, f.astype(dtype) * weights, x), n_modes)
 
-@partial(jax.jit, static_argnames=("n_modes",))
-def ATCinvA(c, x, n_modes):
-    return rmatvec(matvec(c, x, n_modes), x, n_modes)
-
-matmat = jax.vmap(matvec, in_axes=(0, None, None))
-rmatmat = jax.vmap(rmatvec, in_axes=(0, None, None))
+matmat = jax.vmap(matvec, in_axes=(0, None, None, None))
+rmatmat = jax.vmap(rmatvec, in_axes=(0, None, None, None))
 
 @partial(jax.jit, static_argnames=("n_modes", ))
 def _frizzle_materialized(λ_out, λ, flux, ivar, n_modes):
     """
     frizzle some input spectra using materialized matrices.
     """
-    t = time()
+    # The domain over which we care about.
     λ_min, λ_max = (λ_out[0], λ_out[-1])
 
     edge = 2 * jnp.pi / len(λ_out)
@@ -109,29 +104,32 @@ def _frizzle_materialized(λ_out, λ, flux, ivar, n_modes):
 
     x = (λ - λ_min) * scale 
     x_star = (λ_out - λ_min) * scale
+
     I = jnp.eye(n_modes)
 
-    t_setup, t = (time() - t, time())
-    ATCinv = matmat(I, x, n_modes) * ivar
-    ATCinvA = rmatmat(ATCinv, x, n_modes)
-
-    cho_factor = jax.scipy.linalg.cho_factor(ATCinvA)        
-    θ = jax.scipy.linalg.cho_solve(cho_factor, ATCinv @ flux)
-    y_star = matvec(θ, x_star, n_modes)
-    t_y_star, t = (time() - t, time())
-
-    ATCinvA_inv = jax.scipy.linalg.cho_solve(cho_factor, I)
-    A_star_T = matmat(I, x_star, n_modes)
-    C_star = jnp.diag(A_star_T.T @ ATCinvA_inv @ A_star_T)
-    t_C_star = time() - t
-    meta = dict(
-        timing=dict(
-            t_setup=t_setup, 
-            t_y_star=t_y_star, 
-            t_C_star=t_C_star
-        ),
+    C_inv_sqrt = jnp.sqrt(ivar)    
+    weighted_x_mv = lambda c: matvec(c, x, n_modes, C_inv_sqrt)
+    θ = linear_solve.solve_normal_cg(
+        weighted_x_mv,
+        flux * C_inv_sqrt, 
+        init=jnp.zeros(n_modes)
     )
-    return (y_star, C_star, meta)
+
+    ATCinv = matmat(I, x, n_modes, 1) * ivar
+    ATCinvA = rmatmat(ATCinv, x, n_modes, 1)
+    A_star_T = matmat(I, x_star, n_modes, 1)
+    
+    # Cholesky decomposition is faster, but fails for some edge cases.
+    #cho_factor = jax.scipy.linalg.cho_factor(ATCinvA)        
+    #θ = jax.scipy.linalg.cho_solve(cho_factor, ATCinv @ flux)
+    #y_star = matvec(θ, x_star, n_modes)
+    #ATCinvA_inv = jax.scipy.linalg.cho_solve(cho_factor, I)
+
+    ATCinvA_inv, *extras = jnp.linalg.lstsq(ATCinvA, I, rcond=None)
+
+    y_star = matvec(θ, x_star, n_modes, 1)
+    C_star = jnp.diag(A_star_T.T @ ATCinvA_inv @ A_star_T)
+    return (y_star, C_star)
 
 
 @partial(jax.jit, static_argnames=("p", ))
