@@ -26,7 +26,8 @@ def frizzle(
         The wavelengths to sample the combined spectrum on.
     
     :param λ:
-        The wavelengths of the individual spectra. This should be shape (N, ) where N is the number of pixels.
+        The wavelengths of the individual spectra. This should be shape (N, )
+        where N is the number of pixels.
     
     :param flux:
         The flux values of the individual spectra. This should be shape (N, ).
@@ -35,18 +36,25 @@ def frizzle(
         The inverse variance of the individual spectra. This should be shape (N, ).
     
     :param mask: [optional]
-        The mask of the individual spectra. If given, this should be a boolean array (pixels with `True` get ignored) of shape (N, ).
-        The mask is used to ignore pixel flux when combining spectra, but the mask is not used when computing combined pixel flags.
+        The mask of the individual spectra. If given, this should be a boolean 
+        array (pixels with `True` get ignored) of shape (N, ). The mask is used
+        to ignore pixel flux when combining spectra, but the mask is not used 
+        when computing combined pixel flags.
     
     :param flags: [optional]
         An optional integer array of bitwise flags. If given, this should be shape (N, ).
         
     :param censor_missing_regions: [optional]
-        If `True`, then regions where there is no data will be set to NaN in the combined spectrum. If `False` the values evaluated
-        from the model will be reported (and have correspondingly large uncertainties) but this will produce unphysical features.
+        If `True`, then regions where there is no data will be set to NaN in the 
+        combined spectrum. If `False` the values evaluated from the model will be
+        reported (and have correspondingly large uncertainties) but this will 
+        produce unphysical features.
 
     :param n_modes: [optional]
-        The number of Fourier modes to use. If `None` is given then this will default to `len(λ_out)`.
+        The number of Fourier modes to use. If `None` is given then this will 
+        default to the minimum of:
+        - `len(λ_out)`; and
+        - the number of unmasked pixels in the input spectrum.
             
     :returns:
         A four-length tuple of:
