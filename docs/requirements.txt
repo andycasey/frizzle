@@ -1,0 +1,12 @@
+# Documentation build requirements
+sphinx>=5.0
+furo
+myst-parser
+numpy
+scipy
+scikit-learn
+jax>=0.4.30
+jaxlib>=0.4.30
+jax-finufft>=0.1.0
+lineax
+matplotlib>=3.9.4
