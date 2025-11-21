@@ -1,6 +1,6 @@
 [project]
 name = "frizzle"
-version = "0.1.3" 
+version = "0.2.0" 
 readme = "README.md"
 license = {text = "LICENSE.md"}
 description = "Combine spectra by forward modelling" 
@@ -16,9 +16,9 @@ dependencies = [
   "numpy",
   "scipy",
   "scikit-learn",
-  "jax>=0.4.30",
-  "jaxlib>=0.4.30",
-  "jax-finufft>=0.1.0",
+  "jax==0.7.0",
+  "jaxlib==0.7.0",
+  "jax-finufft",
   "lineax"
 ]
 requires-python = ">= 3.9"
@@ -45,3 +45,6 @@ dev = [
   "ipython",
   "matplotlib"
 ]
+
+[tool.uv.sources]
+jax-finufft = { git = "https://github.com/flatironinstitute/jax-finufft.git" }
