@@ -1,9 +1,9 @@
 [project]
 name = "frizzle"
-version = "0.2.0" 
+version = "0.2.1"
 readme = "README.md"
 license = {text = "LICENSE.md"}
-description = "Combine spectra by forward modelling" 
+description = "Combine spectra by forward modelling"
 keywords = ["astronomy software"]
 authors = [
   {name = "Andrew R. Casey", email = "andrew.casey@monash.edu"},
@@ -21,7 +21,7 @@ dependencies = [
   "jax-finufft",
   "lineax"
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 
 [classifiers]
 development_status = "4 - Beta"
