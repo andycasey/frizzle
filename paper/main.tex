@@ -127,8 +127,8 @@ Unlike the shift-and-coadd approach, the estimator we will deliver will be insen
 As we will show with artificial data, the estimator we propose yields a faithful estimate of the \emph{true} spectrum, and usually with good noise properties.
 Both of these results make our results good for subsequent precision measurements (e.g., radial velocities, chemical abundances).
 
-The approach we propose differs from interpolation-and-averaging in a subtle way. 
-Interpolation could be described as computing new values at arbitrary positions based on an existing set of known data points. 
+The approach we propose differs from interpolation-and-averaging in a subtle way.
+Interpolation could be described as computing new values at arbitrary positions based on an existing set of known data points.
 Instead, here we propose to construct a continuous spectral model for the data, such that we can evaluate that model on either the input (raw-data) pixel grid or else on the output (combined spectrum) pixel grid.
 The \emph{output product} is the same form as what one would expect from an interpolation-and-averaging procedure (values at a set of pixel positions), but the \emph{procedure} differs from interpolation. When interpolating, the basis functions are explicitly constructed from the input-data pixel grid, whereas here we construct a forward model that is maximally consistent with the data, and can be evaluated at any pixel locations.
 
@@ -210,7 +210,7 @@ This leads to spectral (or image) variations, and violate the assumptions of thi
 We won't address this kind of variability here, except for some comments in \secref{sec:discussion}:
 The method presented here \modified{could be modified to account for differential LSF or PSF variations by having the model represent a `highest resolution' spectrum or image, and applying different LSF or PSF kernels to each observation before comparing to data, but this extension is outside the scope of this paper.}
 
-\paragraph{Continuous spectral model} 
+\paragraph{Continuous spectral model}
 In what follows we are going to avoid interpolating the data.
 We can avoid it by having a spectral \emph{model} instead that can be arbitrarily and losslessly interpolated.
 That means that the spectral model must be a representation of a continuous one-dimensional function.
@@ -395,7 +395,7 @@ you find yourself in the situation that $M_\star\approx M$, reconsider your life
 
 \paragraph{Fake data}
 We demonstrate the effectiveness of \name{}---the spectral combination method by forward modeling---on artificial data.
-The spectral data were generated from a mean spectral expectation that is a continuum plus a randomly generated line list, where each line equivalent width was set by a random draw from a power law. 
+The spectral data were generated from a mean spectral expectation that is a continuum plus a randomly generated line list, where each line equivalent width was set by a random draw from a power law\modified{, and a voigt profile was assumed for the line shape}.
 This line formation model is unphysical, but it is sufficient for our purposes in that it generates fake data that look like stellar spectra.
 Each spectral epoch was given a velocity (Doppler shift) by putting the epochs equally spaced on a sinusoidal variation with a semi-amplitude of $30\,\kmps$ (to emulate the motion of the spectrograph with respect to the Solar System barycenter).
 The spectral expectation model is built on the assumption of a normalized (unit) continuum and unresolved spectral lines with a Gaussian line-spread function (LSF) with one-sigma width $1/R$, where $R=135\,000$ is the spectrograph resolution. \modified{We arbitrarily assumed a mean density (Poisson rate) of 2$\times{}10^4$ spectral lines per unit in $x$ (natural logarithm of wavelength).}
@@ -600,7 +600,7 @@ It is a pleasure to thank \modified{the anonymous referee for their detailed rev
     \modified{Will Farr (Stony Brook/Flatiron)},
     Dylan Green (UC Irvine),
     \modified{Thomas Hilder (Monash)},
-    Jon Holtzman (NMSU), 
+    Jon Holtzman (NMSU),
     Dustin Lang (Perimeter),
     Adrian Price-Whelan (Flatiron),
 and the Astronomical Data Group at the Flatiron Institute
